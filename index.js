@@ -1,34 +1,34 @@
-process.env.UV_THREADPOOL_SIZE = 1;
-const cluster = require("cluster");
+//? I'm a child, i'm going to act like a server
+//? and do nothing else
+const express = require("express");
+// const crypto = require("crypto");
+const Worker = require("worker_threads").Worker;
+const app = express();
 
-//? Is the file being executed in master mode?
-if (cluster.isMaster) {
-  //? Cause index.js to be executed *agian* but
-  //? in child mode
-  cluster.fork();
-  cluster.fork();
-} else {
-  //? I'm a child, i'm going to act like a server
-  //? and do nothing else
-  const express = require("express");
-  const crypto = require("crypto");
-  const app = express();
+// app.get("/", (req, res) => {
+//   crypto.pbkdf2("a", "b", 10000, 512, "sha512", () => {
+//     res.send("Hi there");
+//   });
+// });
 
-  function doWork(duration) {
-    const start = Date.now();
-
-    while (Date.now() - start < duration) {}
-  }
-
-  app.get("/", (req, res) => {
-    crypto.pbkdf2("a", "b", 10000, 512, "sha512", () => {
-      res.send("Hi there");
-    });
+app.get("/", (req, res) => {
+  const worker = new Worker(function () {
+    this.onmessage = function () {
+      let counter = 0;
+      while (counter < 1e9) {
+        counter++;
+      }
+      postMessage(counter);
+    };
   });
+  worker.onmessage = function (myCounter) {
+    console.log(myCounter);
+  };
+  worker.postMessage();
+});
 
-  app.get("/fast", (req, res) => {
-    res.send("This was fast!");
-  });
+app.get("/fast", (req, res) => {
+  res.send("This was fast!");
+});
 
-  app.listen(3000);
-}
+app.listen(3000);
